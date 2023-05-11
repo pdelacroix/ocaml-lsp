@@ -53,7 +53,7 @@ let compute server (params : CodeActionParams.t) =
     | Ocamllex | Menhir | Cram | Dune ->
       let state : State.t = Server.state server in
       Fiber.return (Reply.now (actions (dune_actions @ open_related)), state)
-    | Ocaml | Reason ->
+    | Ocaml | Reason | Rescript ->
       let reply () =
         let code_action (ca : Code_action.t) =
           match params.context.only with

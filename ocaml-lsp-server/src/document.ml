@@ -8,8 +8,8 @@ module Kind = struct
 
   let of_fname p =
     match Filename.extension p with
-    | ".ml" | ".eliom" | ".re" -> Impl
-    | ".mli" | ".eliomi" | ".rei" -> Intf
+    | ".ml" | ".eliom" | ".re" | ".res" -> Impl
+    | ".mli" | ".eliomi" | ".rei" | ".resi" -> Intf
     | ext ->
       Jsonrpc.Response.Error.raise
         (Jsonrpc.Response.Error.make
@@ -23,6 +23,7 @@ module Syntax = struct
   type t =
     | Ocaml
     | Reason
+    | Rescript
     | Ocamllex
     | Menhir
     | Cram
@@ -31,6 +32,7 @@ module Syntax = struct
   let human_name = function
     | Ocaml -> "OCaml"
     | Reason -> "Reason"
+    | Rescript -> "Rescript"
     | Ocamllex -> "OCamllex"
     | Menhir -> "Menhir/ocamlyacc"
     | Cram -> "Cram"
@@ -39,6 +41,7 @@ module Syntax = struct
   let all =
     [ ("ocaml.interface", Ocaml)
     ; ("ocaml", Ocaml)
+    ; ("rescript", Rescript)
     ; ("reason", Reason)
     ; ("ocaml.ocamllex", Ocamllex)
     ; ("ocaml.menhir", Menhir)
@@ -55,6 +58,7 @@ module Syntax = struct
         match Filename.extension s with
         | ".eliomi" | ".eliom" | ".mli" | ".ml" -> Ok Ocaml
         | ".rei" | ".re" -> Ok Reason
+        | ".resi" | ".res" -> Ok Rescript
         | ".mll" -> Ok Ocamllex
         | ".mly" -> Ok Menhir
         | ".t" -> Ok Cram
@@ -217,7 +221,7 @@ let make wheel config pipeline (doc : DidOpenTextDocumentParams.t)
       let tdoc = Text_document.make ~position_encoding doc in
       let syntax = Syntax.of_text_document tdoc in
       match syntax with
-      | Ocaml | Reason -> make_merlin wheel config pipeline tdoc syntax
+      | Ocaml | Reason | Rescript -> make_merlin wheel config pipeline tdoc syntax
       | Ocamllex | Menhir | Cram | Dune -> Fiber.return (Other { tdoc; syntax }))
 
 let update_text ?version t changes =
@@ -347,20 +351,24 @@ let close t =
 let get_impl_intf_counterparts uri =
   let fpath = Uri.to_path uri in
   let fname = Filename.basename fpath in
-  let ml, mli, eliom, eliomi, re, rei, mll, mly =
-    ("ml", "mli", "eliom", "eliomi", "re", "rei", "mll", "mly")
+  let ml, mli, eliom, eliomi, re, rei, res, resi, mll, mly =
+    ("ml", "mli", "eliom", "eliomi", "re", "rei", "res", "resi", "mll", "mly")
   in
   let exts_to_switch_to =
     match Syntax.of_fname fname with
     | Dune | Cram -> []
     | Ocaml -> (
       match Kind.of_fname fname with
-      | Intf -> [ ml; mly; mll; eliom; re ]
-      | Impl -> [ mli; mly; mll; eliomi; rei ])
+      | Intf -> [ ml; mly; mll; eliom; re; res ]
+      | Impl -> [ mli; mly; mll; eliomi; rei; resi ])
     | Reason -> (
       match Kind.of_fname fname with
       | Intf -> [ re; ml ]
       | Impl -> [ rei; mli ])
+    | Rescript -> (
+      match Kind.of_fname fname with
+      | Intf -> [ res; ml ]
+      | Impl -> [ resi; mli ])
     | Ocamllex -> [ mli; rei ]
     | Menhir -> [ mli; rei ]
   in

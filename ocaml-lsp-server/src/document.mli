@@ -6,6 +6,7 @@ module Syntax : sig
   type t =
     | Ocaml
     | Reason
+    | Rescript
     | Ocamllex
     | Menhir
     | Cram
